@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Stop hook: lightweight lesson capture from non-team sessions.
+# Fires after every session. Skips if a team retrospector already ran
+# (checks for EVIDENCE/retrospector.md in the workspace).
+# Writes to research-lead staging if session had ≥10 tool calls and
+# produced substantive work.
+
+set -euo pipefail
+
+# Read hook payload from stdin
+PAYLOAD=$(cat)
+SESSION_ID=$(echo "$PAYLOAD" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('session_id','unknown'))" 2>/dev/null || echo "unknown")
+CWD=$(echo "$PAYLOAD" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('cwd',''))" 2>/dev/null || echo "")
+
+# Skip if a team session already ran retrospector (they handle their own memory)
+if [ -n "$CWD" ]; then
+  for team_dir in "$CWD/.claude/teams"/*/; do
+    for slug_dir in "$team_dir"*/; do
+      if [ -f "$slug_dir/EVIDENCE/retrospector.md" ]; then
+        # A team retrospector already captured lessons for this session
+        exit 0
+      fi
+    done
+  done
+fi
+
+# Check if the session was substantive (≥10 tool calls is the heuristic)
+# We check by looking at the session JSONL file size as a proxy
+SESSION_DIR="$HOME/.claude/projects"
+JSONL_FILE=""
+if [ -d "$SESSION_DIR" ]; then
+  # Find the most recently modified JSONL file
+  JSONL_FILE=$(find "$SESSION_DIR" -name "*.jsonl" -newer /tmp/.claude-session-start 2>/dev/null | head -1 || true)
+fi
+
+# If we can't find a session file or it's small, skip
+if [ -z "$JSONL_FILE" ] || [ ! -f "$JSONL_FILE" ]; then
+  exit 0
+fi
+
+FILE_SIZE=$(stat -c%s "$JSONL_FILE" 2>/dev/null || echo "0")
+# Skip sessions smaller than 50KB (roughly <10 substantive tool calls)
+if [ "$FILE_SIZE" -lt 51200 ]; then
+  exit 0
+fi
+
+# Write a minimal capture note to staging
+STAGING_DIR="$HOME/.claude/agent-memory/research-lead/staging"
+mkdir -p "$STAGING_DIR"
+TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+CAPTURE_FILE="$STAGING_DIR/adhoc-$(date +%Y%m%d-%H%M%S).md"
+
+cat > "$CAPTURE_FILE" << EOF
+### Ad-hoc session capture ($TIMESTAMP)
+- **Observed in**: adhoc session $SESSION_ID ($(date -I))
+- **Failure mode addressed**: none / session capture
+- **Lesson**: Ad-hoc session in ${CWD:-unknown} produced ${FILE_SIZE} bytes of transcript. Review this staging file and either promote to a real lesson or delete.
+- **Rule of thumb**: Review adhoc staging files during the next team session's scribe pass.
+- **Counter-example / bounds**: If this was a trivial session, delete this file.
+EOF
+
+echo "[session-capture] wrote $CAPTURE_FILE (${FILE_SIZE}B session)" >&2
+exit 0

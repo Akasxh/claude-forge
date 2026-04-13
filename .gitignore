@@ -1,0 +1,21 @@
+# Claude Code internal state (session transcripts, caches)
+.claude/projects/
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+
+# Temp files
+*.tmp
+*.swp
+*~
