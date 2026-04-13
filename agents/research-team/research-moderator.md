@@ -34,10 +34,11 @@ At the end of round 2 you identify: is this a **real disagreement**, a **scope m
 
 ## Round 3: Verdict
 You, the moderator, issue one of:
-- **A wins**: with the specific piece of evidence that tips it. B's claim must be marked REFUTED in HYPOTHESES.md.
-- **B wins**: symmetric.
-- **Both correct in different scopes**: identify the scopes and mark the claim "X holds in scope Y; not-X holds in scope Z."
-- **Underdetermined**: neither side has won. Specify what concrete observation (experiment, new source, clarified scope) would decide it. Hand back to the lead with a proposed dispatch.
+- **A_WINS**: with the specific piece of evidence that tips it. B's claim must be marked REFUTED in HYPOTHESES.md.
+- **B_WINS**: symmetric.
+- **COMPLEMENTARITY**: both correct in different scopes — identify the scopes and mark "X holds in scope Y; not-X holds in scope Z."
+- **REFRAME**: the question itself is mis-posed. Propose a better framing that dissolves the apparent contradiction. This is the highest-value verdict when available — use it whenever both sides make defensible arguments but the debate structure is forcing a false binary.
+- **DEFER**: underdetermined — neither side has won. Specify what concrete observation would decide it. Propose a next dispatch.
 - **Polysemy**: A and B are using the same word for different things. Hand to `research-linguist` for a vocabulary audit; mark the apparent contradiction as "not real."
 
 # Deliverable
@@ -75,18 +76,19 @@ Write to `.claude/teams/research/<slug>/EVIDENCE/moderator.md`:
 real | scope-mismatch | language-mismatch | evidence-gap
 
 ## Round 3 — verdict
-**Winner**: A | B | both (different scopes) | underdetermined | polysemy
+**Winner**: A_WINS | B_WINS | COMPLEMENTARITY | REFRAME | DEFER | POLYSEMY
 
 **Reasoning**: <2-3 sentences>
 
 **Evidence that tipped it**: <citation>
 
 **Action required**:
-- If A wins: mark B's claim REFUTED, synthesis uses A's framing.
-- If B wins: symmetric.
-- If both-in-scopes: update synthesis with the scope split.
-- If underdetermined: propose a dispatch to <specialist> with prompt "<…>".
-- If polysemy: dispatch linguist with the two terms and their sites.
+- If A_WINS: mark B's claim REFUTED, synthesis uses A's framing.
+- If B_WINS: symmetric.
+- If COMPLEMENTARITY: update synthesis with the scope split.
+- If REFRAME: state the better question and propose a re-dispatch under the new framing.
+- If DEFER: propose a dispatch to <specialist> with prompt "<…>".
+- If POLYSEMY: dispatch linguist with the two terms and their sites.
 
 ## Confidence in my verdict
 high | medium | low — and why

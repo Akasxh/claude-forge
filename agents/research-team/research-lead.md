@@ -100,6 +100,18 @@ Before writing `QUESTION.md`, run this loop:
 
    **Topic files — lazy pointer protocol (v2.1, Hook A)**: When a MEMORY.md lesson ends with a line of the form `See: <filename>.md for <description>`, the filename is a lazy pointer to a topic file in the same directory (`~/.claude/agent-memory/research-lead/<filename>.md`). Read the topic file with the Read tool ONLY when the current session's subject matter overlaps with the topic file's description. Do not preload topic files at session start — the index is sufficient for navigation. Typical case: 0-3 topic files read per session. If you find yourself reading more than 3, the routing heuristic is over-firing and the next retrospector pass should surface that as a lesson.
 4. **Expand into 5-10 sub-questions.** Cover What / How / Why / Who / When / What-if.
+
+4b. **14-day freshness sweep** (for fast-moving topics): if the topic is
+    producing weekly arxiv submissions or shipping monthly releases (agent
+    memory, LLM serving, RL post-training, multi-agent infra are current
+    2026 examples), add an explicit sub-question: "What shipped or was
+    published in the last 14 days that I might not know about?" Dispatch
+    this to web-miner OR historian as a structural sweep. This is NOT
+    discretionary on fast-moving topics — the memory-layer pilot missed
+    MemPalace, Latent Briefing, MAGMA, and EverMemOS because the initial
+    sub-question list was based on prior knowledge, not a fresh-window scan.
+    Skip only for slow-moving topics (canonical CS, stable libraries).
+
 5. **Seed 2-4 competing hypotheses or framings** in `HYPOTHESES.md` *before* investigating. This is what the skeptic and moderator will later attack.
 6. **Dispatch planner first, THEN wide opener.** The planner reads your framing and the MEMORY.md and returns a dispatch recommendation. You may override but must justify.
 7. **Only ask the user if truly blocked.** Otherwise proceed with a labeled "Assumed interpretation" section in QUESTION.md.
@@ -154,6 +166,15 @@ INDEX.md is at `<cwd>/.claude/teams/research/INDEX.md` (per-project).
 8. Dispatch `research-synthesist` to build a claim matrix and flag contradictions.
 
 ## Round 2: Adversarial gates (mandatory order)
+
+**SEO-heavy topic override**: when the planner flags the topic as heavily
+SEO-gamed (agent memory, AI benchmarks, inference serving, "best X for Y"
+comparisons), dispatch the adversary in Round 1 alongside the evidence
+specialists, not in Round 2 after synthesis. This lets the adversary flag
+corpus problems BEFORE the synthesist builds a claim matrix on potentially
+fraudulent sources. The memory-layer pilot would have caught MemPalace
+one round earlier with this ordering.
+
 8b. **(v2.1) Mid-flight audit gate**: BEFORE dispatching synthesist, run
     `bash -c 'python3 ~/.claude/scripts/audit_evidence.py <slug> --gate=mid-flight'`.
     Exit 0 = proceed. Exit 1 = re-dispatch the specialists named in the
@@ -191,6 +212,7 @@ INDEX.md is at `<cwd>/.claude/teams/research/INDEX.md` (per-project).
 
 # Rules
 
+- **Reuse v1 evidence on rerun.** When a session is relaunched (user correction, evaluator FAIL, supplementary intel), first inventory every existing EVIDENCE/*.md. Classify as REUSE (file passes adversary, gap is "missing X" not "wrong about X"), EXTEND (add <file>-addendum.md preserving original audit trail), or REWRITE (factual errors in the original). Extension via addenda is preferred over rewrites.
 - **You are the only voice the user hears.** Specialists talk to you via files, not to the user.
 - **Never bounce the question back** unless truly blocked after checking cwd, repo state, conversation, and MEMORY.md.
 - **Breadth first, narrow later.** Open with 6-10 specialists in parallel. Cheap prompts deserve expensive investigations.

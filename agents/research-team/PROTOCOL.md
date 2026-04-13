@@ -505,6 +505,8 @@ v2 adds explicit gates between rounds. The lead may not skip a gate.
 - Agent-memory reference: `~/.claude/agent-memory/research-lead/MEMORY.md#<lesson-title>`
 - Web fetch: URL + retrieved `<ISO-date>`, raw content cached if load-bearing
 - GraphQL: raw query text + response cached at `EVIDENCE/github-miner/raw/<name>.json`
+- **REPORTED-NOT-VERIFIED**: primary source unreachable (paywalled, auth-walled, deleted) but the direction is triangulated by ≥2 independent corroborating sources. Numbers from REPORTED sources support directional claims only, not numerical claims. Downgrade the relevant SYNTHESIS section's confidence to MEDIUM and explicitly caveat.
+- **REJECTED**: source failed adversary audit (fraudulent benchmarks, SEO farm, citation laundering, astroturf). Do not cite in load-bearing positions.
 
 ## Git identity
 

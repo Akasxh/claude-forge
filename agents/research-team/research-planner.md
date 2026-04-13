@@ -23,6 +23,7 @@ Anthropic's multi-agent research post identifies the #1 scaling failure as "simp
    - **"What are people saying about W?"** → sentiment/corpus → web-miner + historian + adversary + linguist.
    - **"Has this been solved before?"** → prior art → historian + librarian + github-miner + synthesist.
    - **"Competitive analysis of category C"** → web-miner + github-miner + historian + adversary + synthesist.
+   - **Fast-moving topic** → add "what shipped in the last 14 days?" as a structural sub-question dispatched to web-miner + historian. Non-discretionary.
 3. Classify the question complexity using Anthropic's scale:
    - **Simple fact-finding**: 1 specialist, 3-10 tool calls. (Rare for this team — usually handled without dispatching.)
    - **Direct comparison**: 2-4 specialists, 10-15 tool calls each.
