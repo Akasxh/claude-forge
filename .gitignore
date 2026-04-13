@@ -2,6 +2,23 @@
 .claude/projects/
 .claude/settings.local.json
 
+# Project-specific session workspaces (not portable)
+.claude/teams/*/
+.playwright-mcp/
+
+# Legacy files not part of claude-forge
+agents/_deprecated/
+agents/research/
+agents/git-manager.md
+session-prompts/
+claude-code-bootstrap-prompt.md
+collaboration.md
+global-CLAUDE.md
+global-mcp-config.json
+global-settings.json
+lib/
+setup-claude-code.sh
+
 # OS
 .DS_Store
 Thumbs.db
