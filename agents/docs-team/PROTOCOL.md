@@ -60,6 +60,8 @@ before docs-writer; no documentation is written without grounded source evidence
 
 Every agent in this team runs on `opus` with `effort: max`.
 This is enforced at the frontmatter level; it is not a prose aspiration.
+If you see an agent file in `~/.claude/agents/docs/` without these
+two fields, it is a bug — report it to the lead and do not proceed.
 
 ## Execution model
 
@@ -140,25 +142,166 @@ Inner reader-before-writer loop for each doc target i in DOC_PLAN.md:
 ### Phase C — Quality Gate
 
 1. Lead writes DOC_PLAN-vs-shipped delta to LOG.md.
-2. `docs-skeptic` attacks documentation quality. Writes `EVIDENCE/skeptic.md`.
+2. `docs-skeptic` attacks documentation quality: inaccuracies, gaps, stale content,
+   over-documentation. Writes `EVIDENCE/skeptic.md`.
 3. `docs-evaluator` runs 5-dimension rubric:
-   - **Strict** (1.0 required): accuracy, example correctness.
+   - **Strict** (1.0 required): accuracy (claims verifiable in reader evidence),
+     example correctness (all examples pass tester).
    - **Advisory** (0.7, lead override allowed): completeness, readability, style conformance.
 4. PASS → retrospection.
 5. FAIL on strict → return to Phase B. Hard cap: 2 evaluator re-runs.
-6. FAIL on advisory only → lead decides.
+6. FAIL on advisory only → lead decides (accept with override OR return).
 
 ### Session close — Retrospection + handback
 
-1. `docs-retrospector` extracts 3-7 lessons to staging/.
-2. Lead merges staging lessons into MEMORY.md (flock + atomic rename).
+1. `docs-retrospector` extracts 3-7 lessons to
+   `~/.claude/agent-memory/docs-lead/staging/<slug>.md`.
+2. Lead merges staging lessons into MEMORY.md using atomic rename after flock:
+   ```bash
+   flock -w 5 -x ~/.claude/agent-memory/docs-lead/.lock \
+     timeout --signal=KILL --kill-after=1 30 bash -c '
+       TMP=~/.claude/agent-memory/docs-lead/MEMORY.md.tmp.$$
+       cp ~/.claude/agent-memory/docs-lead/MEMORY.md "$TMP"
+       for f in ~/.claude/agent-memory/docs-lead/staging/*.md; do
+         [ -f "$f" ] || continue; case "$f" in *_merged*) continue;; esac
+         cat "$f" >> "$TMP"
+         mkdir -p ~/.claude/agent-memory/docs-lead/staging/_merged
+         mv "$f" ~/.claude/agent-memory/docs-lead/staging/_merged/
+       done
+       mv "$TMP" ~/.claude/agent-memory/docs-lead/MEMORY.md
+     '
+   ```
 3. Lead writes INDEX.md entry at `<cwd>/.claude/teams/docs/INDEX.md`.
 4. If cross-team: lead writes HANDBACK_FROM_DOCS to engineering/research workspace.
 
+## Parallel-instance memory segregation
+
+Multiple docs sessions may close simultaneously. The staging pattern
+ensures no race on MEMORY.md writes.
+
+### File layout
+
+```
+~/.claude/agent-memory/docs-lead/
+├── MEMORY.md               # canonical, read at session start
+├── .lock                   # flock(1) advisory lock target
+├── staging/                # per-session lesson deltas
+│   ├── <slug-1>.md         # retrospector writes here
+│   ├── <slug-2>.md
+│   └── _merged/            # archived post-merge
+│       └── <slug>.md
+├── topic/                  # Hook A overflow files
+└── _archive/               # staging files > 90 days old
+```
+
+## Cross-team handoff protocol
+
+### Forward path: Engineering → Docs
+
+When invoked with engineering DIFF_LOG.md or a specific module path:
+
+```
+Agent({
+  subagent_type: "docs-lead",
+  prompt: "Document changes from engineering session <engineering-slug>.
+           Read DIFF_LOG.md as binding input.",
+})
+```
+
+Docs-lead Round 0:
+1. Locates `<cwd>/.claude/teams/engineering/<engineering-slug>/DIFF_LOG.md`.
+2. Reads what changed — these are the doc targets.
+3. Dispatches docs-detector on the project.
+4. Writes CHARTER.md citing the engineering session.
+
+### Feedback path: Docs → Engineering
+
+If docs discovers an engineering API is inconsistent with its documentation:
+```
+FEEDBACK_FROM_DOCS.md: ACCURACY_ERROR | MISSING_DOCS | STALE_DOCS
+```
+
+### Back path: Docs → Research feedback
+
+If research claimed something about a project's API surface that docs proves wrong,
+file `FEEDBACK_FROM_DOCS.md` in the docs workspace and copy to the research workspace.
+
+## Shared workspace
+
+Session workspaces: `<cwd>/.claude/teams/docs/<slug>/`
+Protocols: `~/.claude/teams/docs/PROTOCOL.md` (global)
+MEMORY.md: `~/.claude/agent-memory/docs-lead/MEMORY.md` (global)
+
+```
+.claude/teams/docs/<slug>/
+├── CHARTER.md              # owned by lead (Round 0)
+├── DOC_PLAN.md             # owned by lead (Phase A close)
+├── EVIDENCE/
+│   ├── detector.md         # docs-detector
+│   ├── planner.md          # docs-planner
+│   ├── reader-<target>.md  # docs-reader (one per doc target)
+│   ├── tester.md           # docs-tester (running log)
+│   ├── reviewer.md         # docs-reviewer (running log)
+│   ├── diagrammer-<target>.md  # docs-diagrammer (conditional)
+│   ├── skeptic.md          # docs-skeptic
+│   ├── evaluator.md        # docs-evaluator
+│   └── retrospector.md     # docs-retrospector
+├── TEST_LOG.md             # tester appends per run
+└── LOG.md                  # everyone appends
+```
+
+Team-wide files:
+```
+<cwd>/.claude/teams/docs/INDEX.md              # lead-owned, one line per session (per-project)
+~/.claude/agent-memory/docs-lead/MEMORY.md     # retrospector → staging → lead merges (global)
+~/.claude/agent-memory/docs-lead/staging/      # per-session deltas (global)
+```
+
+## Ownership rules
+
+| File | Who writes | Who reads |
+|---|---|---|
+| `CHARTER.md` | `docs-lead` | everyone |
+| `DOC_PLAN.md` | `docs-lead` (integrates planner output) | everyone |
+| `EVIDENCE/<name>.md` | only the named specialist | everyone |
+| `TEST_LOG.md` | `docs-tester` (per run) | everyone |
+| `LOG.md` | everyone (append-only) | everyone |
+| `INDEX.md` | `docs-lead` only | everyone |
+| `MEMORY.md` | `docs-retrospector` (via staging) + `docs-lead` (merge) | `docs-lead` at session start |
+
+Nobody edits another specialist's evidence file. Contradictions resolved by the lead.
+
+## Escalation
+
+If the soft termination cap trips (`2 × target_count` iterations), log WARNING and continue.
+
+If the hard termination cap trips (`5 × target_count` iterations):
+1. Force-halt Phase B.
+2. Dispatch docs-evaluator on current state (likely FAIL on completeness).
+3. Present user with options: {replan, handback with degraded acceptance, abort}.
+
+If after 2 evaluator re-runs the evaluator still FAILs on a strict dimension:
+1. Deliver PROVISIONAL result with documented accuracy gaps.
+2. Publish OPEN_QUESTIONS.md with what's unresolved.
+3. Dispatch docs-retrospector to capture the failure.
+
+## Session naming
+
+`<slug>` chosen by docs-lead from the task. Examples:
+- `vllm-api-docs-v1`
+- `readme-overhaul`
+- `onboarding-guide-v2`
+
 ## Prior art this protocol imports
 
-- **DocAgent** (Lyu et al., arxiv 2024) — reader-before-writer pattern.
-- **Anthropic "Building effective agents"** — orchestrator-worker, evaluator-optimizer.
+- **DocAgent** (Lyu et al., arxiv 2024) — topological code processing achieves
+  95.7% truthfulness vs 61.1% for chat-based. Reader-before-writer is this
+  protocol's implementation of that finding.
+- **Anthropic "Building effective agents"** — orchestrator-worker pattern (Phase A),
+  evaluator-optimizer pattern (Phase B), gather-act-verify-repeat inner loop.
+- **Anthropic "Building agents with the Claude Agent SDK"** — adopted-persona pattern.
 - **MAST** (Cemri et al., arxiv 2503.13657) — 14 failure mode taxonomy.
 - **ACE** (Zhang et al., arxiv 2510.04618) — evolving playbook, grow-and-refine curation.
-- **Engineering Team PROTOCOL v1** — adversarial gates, staging merge protocol.
+- **Engineering Team PROTOCOL v1** — adversarial gates, MEMORY.md patterns,
+  staging protocol, flock+timeout+atomic-rename merge.
+- **docs-knowledge-team-self-evolve-v1** — design session that produced this team.

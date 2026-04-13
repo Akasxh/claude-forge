@@ -1,0 +1,49 @@
+{
+  "model": "claude-opus-4-6[1m]",
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": ["*"],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf $HOME)",
+      "Bash(:(){ :|:& };:)",
+      "Bash(mkfs *)",
+      "Bash(dd if=* of=/dev/sd*)",
+      "Bash(dd if=* of=/dev/nvme*)",
+      "Bash(git push --force origin main*)",
+      "Bash(git push -f origin main*)",
+      "Bash(git push --force origin master*)",
+      "Bash(git push -f origin master*)"
+    ]
+  },
+  "env": {
+    "ANTHROPIC_MODEL": "claude-opus-4-6[1m]",
+    "CLAUDE_DEFAULT_MODEL": "claude-opus-4-6[1m]"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .claude/coordination/TASKS.md ]; then echo '== ACTIVE COLLABORATION =='; cat .claude/coordination/TASKS.md; echo; tail -20 .claude/coordination/LOG.md 2>/dev/null; fi; if [ -d .claude/teams ]; then echo '== ACTIVE TEAMS =='; ls .claude/teams 2>/dev/null; fi; bash ~/.claude/lib/git-identity.sh 2>&1 || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); cmd=$(printf '%s' \"$input\" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get(\"tool_input\",{}).get(\"command\",\"\"))' 2>/dev/null || true); case \"$cmd\" in *'git commit'*|*'git push'*|*'gh pr create'*|*'gh pr edit'*) bash ~/.claude/lib/git-identity.sh 2>&1 || true ;; esac; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

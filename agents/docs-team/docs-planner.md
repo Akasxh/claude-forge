@@ -20,13 +20,16 @@ Read:
 
 # Method
 
-1. **Extract acceptance criteria** from CHARTER.md.
+1. **Extract acceptance criteria** from CHARTER.md. What does "done" look like for this documentation task?
 2. **Identify target audience** for each doc type. Developer (internal, reads source), user (external, reads docs only), operator (deployer, reads config reference), contributor (writes code, reads CONTRIBUTING).
 3. **Inventory the gap** from detector.md: which public APIs are undocumented? Which docs are stale? What's completely missing?
 4. **Decompose into atomic doc targets**: a target is atomic if one reader+writer+tester+reviewer cycle can complete it without needing another target's output mid-stream.
-5. **Build priority matrix**: HIGH (public APIs with no docs, README), MEDIUM (architecture docs, contributing guide), LOW (inline comments on unexported code, old changelog entries).
+5. **Build priority matrix** using these signals:
+   - HIGH: public APIs with no docs, README (first thing users see), getting-started guide
+   - MEDIUM: architecture docs, contributing guide, API reference expansions
+   - LOW: inline comments on unexported/internal code, changelog entries older than 1 month
 6. **Order targets**: fail-fast ordering — start with the doc that unblocks the most users.
-7. **Estimate reader complexity**: which targets need deep source reads vs shallow reads?
+7. **Estimate reader complexity**: which targets need deep source reads (large modules, complex APIs) vs shallow reads (simple utilities, type aliases)?
 
 # Output: `EVIDENCE/planner.md`
 
@@ -35,7 +38,7 @@ Read:
 
 ## Documentation targets
 
-### Target 1: <short title>
+### Target 1: <short title> (e.g., "README — getting started")
 - **Doc type**: README / API reference / architecture / changelog / guide / inline comment
 - **Audience**: developer / user / operator / contributor
 - **Source files to read**: <list of source files docs-reader should analyze>
@@ -44,6 +47,9 @@ Read:
 - **Dependencies**: <none | "depends on target N">
 - **Estimated reader complexity**: shallow / medium / deep
 - **Acceptance criteria**: <which CHARTER criteria this target contributes to>
+
+### Target 2: <short title>
+...
 
 ## Priority matrix
 
@@ -65,6 +71,7 @@ From detector.md:
 1. Target 1 (HIGH — blocks most users)
 2. Target 3 (HIGH — parallel with 1 if independent)
 3. Target 2 (MEDIUM — after 1 and 3)
+...
 
 ## Acceptance criteria coverage
 
@@ -84,5 +91,5 @@ From detector.md:
 - **Every target must be atomic.** Completable in one reader+writer+tester+reviewer pass.
 - **Every target must map to at least one CHARTER acceptance criterion.**
 - **Audience is mandatory for every target.** Without knowing who reads it, the writer cannot make style decisions.
-- **Source files are mandatory for reader-bound targets.** The planner must specify which files docs-reader should analyze.
-- **If CHARTER cites an engineering DIFF_LOG as binding input**, read it before decomposing. The changed files are the doc targets.
+- **Source files are mandatory for reader-bound targets.** The planner must specify which files docs-reader should analyze — the reader cannot guess.
+- **If CHARTER cites an engineering DIFF_LOG as binding input**, read it before decomposing. The changed files are the doc targets; your job is to make them atomic.

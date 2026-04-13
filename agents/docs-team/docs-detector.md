@@ -45,27 +45,59 @@ For each detected language, find the doc generator:
 
 **C/C++**: Check for Doxygen (`Doxyfile`, `doxygen.cfg`), `/** ... */` comment style.
 
-**Java/Kotlin**: Javadoc is default. Check `pom.xml`/`build.gradle` for javadoc plugin config.
+**Java/Kotlin**: Javadoc is default. Check `pom.xml`/`build.gradle` for javadoc plugin config. Check for KDoc (`/** ... */` with `@param`, `@return`).
 
 ## Step 3: Existing documentation inventory
 
-Scan for existing documentation: README.md, docs/, CHANGELOG.md, CONTRIBUTING.md, ARCHITECTURE.md, API.md, examples/, tutorials/. For each found, record: path, size, last modified, format, apparent quality (stub vs comprehensive).
+Scan for existing documentation:
+
+```
+README.md / README.rst / README.txt
+docs/
+  *.md, *.rst, *.txt, *.adoc
+CHANGELOG.md / HISTORY.md / CHANGES.md
+CONTRIBUTING.md
+ARCHITECTURE.md / DESIGN.md
+API.md / api-reference/
+examples/ / tutorials/
+wiki/ (if git submodule)
+```
+
+For each found, record: path, size, last modified, format (Markdown/RST/AsciiDoc/HTML), and apparent quality (stub vs comprehensive).
 
 ## Step 4: API surface detection
 
-Walk the source tree and count public functions/methods/classes/structs/interfaces/constants/modules. Cross-reference with existing docs to find coverage gap.
+Walk the source tree and count:
+- Public functions/methods (not prefixed with `_` in Python, lowercase in Go, `pub` in Rust, etc.)
+- Public classes/structs/interfaces
+- Public constants/enums
+- Modules/packages
+
+Cross-reference with existing docs to find coverage gap.
 
 ## Step 5: Style guide detection
 
-Look for `.editorconfig`, `.markdownlint.json`, `docs/style-guide.md`, `CONTRIBUTING.md` (doc style rules), existing README header style, inline comment style.
+Look for:
+- `.editorconfig`, `.markdownlint.json`, `.markdownlint.yml` — lint config
+- `docs/style-guide.md`, `CONTRIBUTING.md` (often contains doc style rules)
+- Existing README header style (shields.io badges? table of contents? emojis?)
+- Inline comment style: imperative mood ("Returns X") vs declarative ("X is returned")
+- Code example style: does existing code show import statements? error handling?
 
 ## Step 6: Changelog format detection
 
-Look for `CHANGELOG.md` or `HISTORY.md`. Detect format: Keep a Changelog, conventional commits, custom. Detect versioning scheme.
+Look for `CHANGELOG.md` or `HISTORY.md`. If present:
+- Detect format: [Keep a Changelog](https://keepachangelog.com), conventional commits, custom.
+- Detect versioning scheme: semver, calver, custom.
+- Detect whether changelog is maintained manually or generated from git log.
 
 ## Step 7: CI/CD doc pipeline detection
 
-Check `.github/workflows/*.yml` for doc build/deploy jobs, `netlify.toml`, `Makefile` doc targets, `readthedocs.yaml`.
+Check for:
+- `.github/workflows/*.yml` — doc build/deploy jobs (look for `sphinx-build`, `mkdocs build`, `cargo doc`, `typedoc`)
+- `netlify.toml`, `vercel.json` — doc hosting
+- `Makefile` doc targets (`make docs`, `make html`)
+- `readthedocs.yaml` / `.readthedocs.yml` — ReadTheDocs config
 
 # Output: `EVIDENCE/detector.md`
 
@@ -120,4 +152,4 @@ DETECTED — project doc profile complete, ready for docs-planner
 - **Read actual source files, not just manifests.** Manifests can be incomplete.
 - **Report what IS, not what should be.** If the project has no docs at all, say so explicitly.
 - **Polyglot projects get multiple profiles.** One section per language.
-- **If no docs exist at all**, report that explicitly. Coverage gap is 100%.
+- **If no docs exist at all**, report that explicitly. Coverage gap is 100%. This is the most valuable detection result — the planner needs to know.

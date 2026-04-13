@@ -33,9 +33,11 @@ For each public function/method/class/type in scope:
 
 **Rust**: Extract from `pub fn`, `pub struct`, `pub enum`, `pub trait`, `pub const`. Read `#[derive(...)]` for auto-implemented traits. Extract `?` and `Err(...)` for error docs.
 
-**TypeScript/JavaScript**: Extract from exported `function`, `class`, `interface`, `type`, `const`. Read TSDoc/JSDoc comments if present (even if outdated — note them as "existing but unverified").
+**TypeScript/JavaScript**: Extract from exported `function`, `class`, `interface`, `type`, `const`. Read TSDoc/JSDoc comments if present (even if outdated — note them as "existing but unverified"). Note `throws` tags if present.
 
 **Go**: Extract from exported identifiers (capitalized). Read existing godoc comments. Note error return patterns.
+
+**C/C++**: Extract from header files. Note `noexcept`, error codes, output parameters.
 
 ## Step 3: Behavior contract extraction
 
@@ -43,20 +45,84 @@ For each extracted signature, derive behavior contracts by reading the implement
 
 - **Preconditions**: what inputs cause errors/panics? (look for guard clauses, `assert`, `unwrap`, `panic`)
 - **Postconditions**: what does the function guarantee about its return value?
-- **Side effects**: does it mutate state? make network calls? write files?
+- **Side effects**: does it mutate state? make network calls? write files? (look for `mut`, `self.field = `, I/O operations)
 - **Thread safety**: are there `Mutex`, `Arc`, `unsafe` blocks? Is it async?
+- **Performance notes**: does it allocate? is it O(n²)? does it cache?
 
 ## Step 4: Usage example extraction
 
-Find existing usage in tests/, examples/, README.md, benchmarks. Extract 1-3 representative examples per function/class. Prefer: happy path, error handling pattern, non-obvious option.
+Find existing usage in:
+- `tests/` / `*_test.*` — test files are the most accurate usage examples
+- `examples/` — if present, these are the intended usage patterns
+- `README.md` — existing examples (note if they compile/run correctly per tester)
+- Benchmarks — show realistic inputs
+
+Extract 1-3 representative examples per function/class. Prefer examples that show:
+1. Happy path (most common usage)
+2. Error handling pattern (if function can fail)
+3. Non-obvious option or configuration (if applicable)
 
 ## Step 5: Cross-reference detection
 
-Note: which other functions/types does this call or depend on? What errors propagate from dependencies?
+Note:
+- Which other functions/types does this call or depend on?
+- What does this return that other functions consume?
+- What errors/exceptions propagate from dependencies?
 
 # Output: `EVIDENCE/reader-<target>.md`
 
-Structured evidence with: source files analyzed (dependency order), API inventory (signature, parameters table, returns, raises, side effects, thread safety, behavior contract, examples), cross-references, reader confidence (HIGH/MEDIUM/LOW), and handoff note to writer.
+```markdown
+# Reader — <target> — <slug>
+
+## Source files analyzed (in dependency order)
+1. `<path>` — <role: types / implementation / entry point>
+2. ...
+
+## API inventory
+
+### `<FullName>` (<category: function / class / method / type / const>)
+
+**Signature**:
+```<language>
+<exact signature copied from source>
+```
+
+**Parameters**:
+| Name | Type | Required | Description inferred from code |
+|---|---|---|---|
+| <name> | <type> | yes/no/default:<val> | <what the code shows it's used for> |
+
+**Returns**: `<type>` — <what the code shows it returns>
+
+**Raises/Errors**: <list of error types and conditions triggering them>
+
+**Side effects**: <mutations, I/O, allocations — or "none observed">
+
+**Thread safety**: <observation from implementation — mutex, async, unsafe, etc.>
+
+**Behavior contract**:
+- Precondition: <guard clauses in implementation>
+- Postcondition: <guarantees visible in tests>
+
+**Examples** (from tests/examples/usage in codebase):
+```<language>
+<exact example copied from source>
+```
+
+---
+
+## Cross-references
+- `<FunctionA>` calls `<FunctionB>` — <why relevant>
+- `<TypeX>` is consumed by `<FunctionY>` — <why relevant>
+
+## Reader confidence
+- HIGH: all signatures extracted from source; examples from tests
+- MEDIUM: some behavior inferred (no tests for that path)
+- LOW: <explain what was inferred and why>
+
+## Handoff to writer
+All documentation claims must trace to a section above. If the writer cannot find a claim's source here, that claim MUST NOT appear in the documentation.
+```
 
 # Hard rules
 
@@ -64,5 +130,6 @@ Structured evidence with: source files analyzed (dependency order), API inventor
 - **Copy signatures verbatim.** Do not paraphrase parameter names or types.
 - **Extract from tests first.** Tests are the most reliable behavior documentation.
 - **Note confidence level per item.** "Inferred from guard clause at L42" is valid evidence. "Probably does X" is not.
-- **Do NOT write documentation prose.** That is the writer's job. You produce structured evidence.
-- **Report what IS, not what should be.** If a function has no error handling despite calling IO functions, report that.
+- **If the source is too large** to read completely, read: the type definitions, the public interface, and the tests. Skip private implementation details.
+- **Do NOT write documentation prose.** That is the writer's job. You produce structured evidence, not human-readable text.
+- **Report what IS, not what should be.** If a function has no error handling despite calling IO functions, report that — do not invent error documentation.

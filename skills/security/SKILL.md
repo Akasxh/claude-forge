@@ -8,5 +8,5 @@ description: Dispatch the Security & Review Team on any security task. Auto-dete
 1. Read `~/.claude/agent-memory/security-lead/MEMORY.md`.
 2. Read `~/.claude/agents/security/security-lead.md` — adopt as behavioral contract.
 3. Create session workspace at `<cwd>/.claude/teams/security/<slug>/`.
-4. Execute: Auto-detect → Plan → Scan (domain specialists in parallel) → Skeptic gate → Evaluator → Retrospector.
-5. Deliver security report with BLOCKER/ADVISORY/PASS verdict and actionable remediation.
+4. Execute: Detection → Plan → Scan (scanner+secrets+reviewer+threat-modeler loop) → Evaluator → Retrospector.
+5. Deliver security report with BLOCKER/ADVISORY/PASS verdicts and actionable remediation.

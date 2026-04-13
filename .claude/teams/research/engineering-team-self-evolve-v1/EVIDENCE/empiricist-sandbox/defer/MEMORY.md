@@ -1,0 +1,2 @@
+# MEMORY.md
+### deferred lesson

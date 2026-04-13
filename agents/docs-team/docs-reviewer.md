@@ -24,7 +24,11 @@ Even if the tester confirms examples run, documentation can still fail: wrong pa
 
 ## Stage 1: Accuracy review
 
-For every factual claim in the documentation: trace it to `EVIDENCE/reader-<target>.md`. If the claim has no source in reader.md, flag as ACCURACY_FAILURE.
+For every factual claim in the documentation:
+1. Trace it to `EVIDENCE/reader-<target>.md`.
+2. If the claim appears in writer.md's claim log with a valid reader source, mark VERIFIED.
+3. If the claim does NOT appear in writer.md's claim log, check reader.md manually.
+4. If the claim has no source in reader.md, flag as ACCURACY_FAILURE.
 
 Accuracy failures by severity:
 - **CRITICAL**: wrong function signature (wrong parameter name, wrong type, nonexistent parameter)
@@ -39,24 +43,77 @@ Check against the DOC_PLAN target spec:
 - Are all parameters documented?
 - Is error handling documented for functions that can fail?
 - Are there usage examples where the planner spec requires them?
+- Are related docs cross-linked (if links exist)?
 
-Gap classification: **BLOCKING** (public API in scope has no documentation at all) vs **NON-BLOCKING** (minor omission).
+Gap classification:
+- **BLOCKING**: a public API exists, has no documentation at all, and was in scope
+- **NON-BLOCKING**: minor omission (one optional parameter undocumented in a 20-parameter function)
 
 ## Stage 3: Audience-appropriateness review
 
 Apply the audience filter from CHARTER:
-- **Developer docs**: type information present? error handling pattern shown?
+- **Developer docs**: type information present? error handling pattern shown? implementation-level detail appropriate to level?
 - **User docs**: plain language? no unexplained jargon? no internal file paths or variable names?
-- **Operator docs**: configuration reference complete? environment variables documented?
+- **Operator docs**: configuration reference complete? environment variables documented? health check / monitoring section?
 - **Contributor docs**: design rationale present? repo structure explained? test instructions present?
+
+Flag any audience mismatch (e.g., user-facing README explaining memory layout internals).
 
 ## Stage 4: Style review
 
-Check against detected style guide (from `EVIDENCE/detector.md`): heading levels consistent? code examples use detected code block style? sentence case vs title case consistent? imperative mood in function descriptions? no emojis unless detected project uses them?
+Check against detected style guide (`EVIDENCE/detector.md`):
+- Heading levels consistent with existing docs?
+- Code examples use detected code block style?
+- Sentence case vs title case in headings — consistent with project?
+- Imperative mood in function descriptions?
+- No emojis unless detected project uses them?
+- Line length within project norms?
 
 # Output: `EVIDENCE/reviewer.md`
 
-Structured report with: Stage 1 accuracy review table (claim, source in reader.md, status), accuracy failures list with severity and suggested corrections, Stage 2 completeness review, Stage 3 audience-appropriateness review, Stage 4 style review, and REQUEST_CHANGES or PASS verdict with required vs optional changes.
+```markdown
+# Reviewer — <target> — <slug>
+
+## Stage 1: Accuracy review
+
+| Claim | Source in reader.md | Status |
+|---|---|---|
+| `process_batch(timeout=30)` default is 30 | reader.md L45 | VERIFIED |
+| "Returns None on failure" | NOT FOUND in reader.md | ACCURACY_FAILURE (HIGH) |
+
+### Accuracy failures (for writer revision)
+**CRITICAL**: None
+**HIGH**: "Returns None on failure" — reader.md shows the function raises `ValueError` on invalid input, returns the result dict or propagates exceptions. "Returns None" is incorrect and will mislead callers. Correct to: "Raises `ValueError` if input is invalid; otherwise returns `<return type>`."
+
+## Stage 2: Completeness review
+
+- ✓ All 3 functions in scope are documented
+- ✗ BLOCKING: `process_batch` — `retry_count` parameter (in reader evidence) is not documented
+- ✓ Error handling documented for I/O functions
+- ✗ NON-BLOCKING: no usage example for `process_batch` with custom timeout
+
+## Stage 3: Audience-appropriateness review
+
+- Audience: developer (from CHARTER)
+- ✓ Type information present for all parameters
+- ✗ MEDIUM: L23-L28 explains internal memory pooling implementation — unnecessary for developer-facing API docs. Remove or move to architecture doc.
+
+## Stage 4: Style review
+
+- ✓ Heading levels consistent with existing docs
+- ✓ Code blocks use ` ```python ` style (per detector)
+- ✗ LOW: Line 45 uses title case "Return Values" — existing docs use sentence case "Return values"
+
+## Verdict
+
+REQUEST_CHANGES
+- CRITICAL blocking items: 0
+- HIGH blocking items: 1 (incorrect return behavior description)
+- Required changes: see Stage 1 HIGH item, Stage 2 BLOCKING item
+- Optional changes: see Stage 3 MEDIUM item, Stage 4 LOW item
+
+PASS criteria: fix the 1 HIGH + 1 BLOCKING item. Advisory items optional.
+```
 
 # Hard rules
 
