@@ -1,0 +1,12 @@
+# Memory MCP Server dependencies
+# The server uses only stdlib (sqlite3, json, math, pathlib, sys)
+# so there are NO required third-party packages for the MVP.
+#
+# Optional future enhancements:
+#   sqlite-vec>=0.1.0      # vector similarity search (requires compiled extension)
+#   numpy>=1.24            # for embedding generation
+#   sentence-transformers  # for local embedding models
+#
+# The mcp package is NOT needed for stdio servers using raw JSON-RPC;
+# install it only if you want to switch to FastMCP:
+#   mcp>=1.0.0
